@@ -242,6 +242,7 @@ export ANDROID_BUILD_TOP="$(pwd)"
 export ANDROID_KEY_PATH="$ANDROID_BUILD_TOP/vendor/lineage-priv/keys"
 set +u
 source build/envsetup.sh
+make installclean
 axion fogos "$VARIANT" core
 ax -br
 echo "=== BUILD DONE $(date -u) ==="
