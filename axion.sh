@@ -1,4 +1,4 @@
-crave run --no-patch -- "#!/usr/bin/env bash
+#!/usr/bin/env bash
 # Axion fogos - every change we made, in one pass.
 #
 #   1. Twelve removed from common_mobile_full.mk
@@ -195,4 +195,4 @@ ax -br
 echo "=== BUILD DONE $(date -u) ===" && 
 make installclean && 
 axion fogos user core && 
-ax -br"
+ax -br
