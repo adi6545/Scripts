@@ -263,6 +263,13 @@ grep -q "vendor/motorola/motocamera/motocamera.mk" "$DEV/device.mk" \
   || { echo "ERROR: device.mk motocamera inherit not updated"; exit 1; }
 echo "  motocamera: OK ($(stat -c%s "$APK") b)"
 
+python3 -c "
+import re
+p='vendor/motorola/motocamera/Android.bp'; s=open(p).read()
+for n in ('libAncFaceDetect','libancbase_fd'):
+    s=re.sub(r'cc_prebuilt_library_shared \{[^{}]*name: \"'+n+r'\".*?\n\}\n', '', s, flags=re.S)
+open(p,'w').write(s)"
+
 echo "=== BUILD $(date -u) ==="
 export ANDROID_BUILD_TOP="$(pwd)"
 export ANDROID_KEY_PATH="$ANDROID_BUILD_TOP/vendor/lineage-priv/keys"
