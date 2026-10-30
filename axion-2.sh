@@ -236,24 +236,32 @@ echo
 if [ "$fail" != "0" ]; then echo "ABORTING: $fail check(s) failed"; exit 1; fi
 echo "all checks passed"
 
-# ---- 9. build --------------------------------------------------------
-# 1. replace the repo  (note: branch is 'fogos', not 'sixteen-qpr2')
-rm -rf vendor/motorola/motocamera
-git clone --depth=1 -b fogos https://github.com/tiraq-official/vendor_motorola_motocam.git \
-  vendor/motorola/motocamera
+# ---- 9. motocamera (tiraq repo) --------------------------------------
+APK=vendor/motorola/motocamera/proprietary/product/priv-app/MotCamera4/MotCamera4.apk
 
-# 2. pull the LFS object — a plain clone only gets a 134-byte pointer
-( cd vendor/motorola/motocamera && git lfs pull ) 2>/dev/null || \
-  curl -fL -o vendor/motorola/motocamera/proprietary/product/priv-app/MotCamera4/MotCamera4.apk \
-    https://media.githubusercontent.com/media/tiraq-official/vendor_motorola_motocam/fogos/proprietary/product/priv-app/MotCamera4/MotCamera4.apk
+if [ ! -f vendor/motorola/motocamera/motocamera.mk ]; then
+  echo "=== motocamera: swapping to tiraq repo ==="
+  rm -rf vendor/motorola/motocamera
+  git clone --depth=1 -b fogos \
+    https://github.com/tiraq-official/vendor_motorola_motocam.git vendor/motorola/motocamera
+else
+  echo "=== motocamera: already tiraq ==="
+fi
 
-# 3. point device.mk at the new makefile
-sed -i "s|inherit-product-if-exists, vendor/motorola/motocamera/MotoCamera\.mk|inherit-product, vendor/motorola/motocamera/motocamera.mk|" \
-  device/motorola/fogos/device.mk
+# a plain clone gives a 134-byte LFS pointer, not the 227 MB APK
+if [ ! -f "$APK" ] || [ "$(stat -c%s "$APK" 2>/dev/null || echo 0)" -lt 100000000 ]; then
+  echo "  fetching LFS object..."
+  ( cd vendor/motorola/motocamera && git lfs pull ) 2>/dev/null || \
+    curl -fL -o "$APK" \
+      https://media.githubusercontent.com/media/tiraq-official/vendor_motorola_motocam/fogos/proprietary/product/priv-app/MotCamera4/MotCamera4.apk
+fi
+[ "$(stat -c%s "$APK" 2>/dev/null || echo 0)" -gt 100000000 ] \
+  || { echo "ERROR: $APK missing or still an LFS pointer"; exit 1; }
 
-# 4. verify
-stat -c '  %s bytes  %n' vendor/motorola/motocamera/proprietary/product/priv-app/MotCamera4/MotCamera4.apk
-grep -n "motocamera/motocamera.mk" device/motorola/fogos/device.mk
+sed -i "s|inherit-product-if-exists, vendor/motorola/motocamera/MotoCamera\.mk|inherit-product, vendor/motorola/motocamera/motocamera.mk|" "$DEV/device.mk"
+grep -q "vendor/motorola/motocamera/motocamera.mk" "$DEV/device.mk" \
+  || { echo "ERROR: device.mk motocamera inherit not updated"; exit 1; }
+echo "  motocamera: OK ($(stat -c%s "$APK") b)"
 
 echo "=== BUILD $(date -u) ==="
 export ANDROID_BUILD_TOP="$(pwd)"
