@@ -237,6 +237,24 @@ if [ "$fail" != "0" ]; then echo "ABORTING: $fail check(s) failed"; exit 1; fi
 echo "all checks passed"
 
 # ---- 9. build --------------------------------------------------------
+# 1. replace the repo  (note: branch is 'fogos', not 'sixteen-qpr2')
+rm -rf vendor/motorola/motocamera
+git clone --depth=1 -b fogos https://github.com/tiraq-official/vendor_motorola_motocam.git \
+  vendor/motorola/motocamera
+
+# 2. pull the LFS object — a plain clone only gets a 134-byte pointer
+( cd vendor/motorola/motocamera && git lfs pull ) 2>/dev/null || \
+  curl -fL -o vendor/motorola/motocamera/proprietary/product/priv-app/MotCamera4/MotCamera4.apk \
+    https://media.githubusercontent.com/media/tiraq-official/vendor_motorola_motocam/fogos/proprietary/product/priv-app/MotCamera4/MotCamera4.apk
+
+# 3. point device.mk at the new makefile
+sed -i "s|inherit-product-if-exists, vendor/motorola/motocamera/MotoCamera\.mk|inherit-product, vendor/motorola/motocamera/motocamera.mk|" \
+  device/motorola/fogos/device.mk
+
+# 4. verify
+stat -c '  %s bytes  %n' vendor/motorola/motocamera/proprietary/product/priv-app/MotCamera4/MotCamera4.apk
+grep -n "motocamera/motocamera.mk" device/motorola/fogos/device.mk
+
 echo "=== BUILD $(date -u) ==="
 export ANDROID_BUILD_TOP="$(pwd)"
 export ANDROID_KEY_PATH="$ANDROID_BUILD_TOP/vendor/lineage-priv/keys"
